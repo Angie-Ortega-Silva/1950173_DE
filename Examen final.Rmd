@@ -1,0 +1,228 @@
+---
+title: "Estado de salud de las personas"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Base de Datos  
+
+```{r}
+library(readxl)
+Datos <- read_excel("C:/Users/User/Desktop/Angie Universidad/4to semestre/Diseño de experimentos/Office/Base de datos.xlsx")
+```
+
+### Tipificación de variables (Estandarización)  
+
+```{r}
+datost <- Datos
+datost <- scale(datost, center = T, scale = T)
+datost <- as.data.frame(datost)
+```
+
+## Normalidad Multivariante  
+
+Hipótesis nula H0: Normalidad mutivariante  
+Hipótesis alternativa H1: no normalidad multivariante  
+Confianza: 95%  
+Alfa = 5% = 0.05  
+P value > alfa: No se rechaza la H0  
+P value < alfa: Se rechaza la H0  
+
+```{r}
+library(MVN)
+mvn(datost[2:7])
+```
+
+Ambas pruebas de normalidad multivariante (Kurtosis y Skewness) nos indican que el AFE es permisible para esta base de datos, pues si presenta normalidad multivariante por lo tanto la H0 queda rechazada.  
+
+## Matriz de correlaciones  
+
+Hipótesis nula (H0): Correlacion= 0  
+Hipótesis alternativa (H1): Correlacion diferente de 0  
+Es necesario rechazar la hipótesis nula para aplicar el AFE.  
+
+```{r}
+library(psych)
+corr.test(datost[,2:7])
+correlaciones<- corr.test(datost[,2:7])
+correlaciones$r
+r<- as.matrix(correlaciones$r)
+```
+
+# Indicadores de aplicabilidad del AFE  
+
+## Contraste de esfericidad de Bartltett  
+
+```{r}
+dim(datost)
+cortest.bartlett(r, n=30)
+```
+
+Como el P value es menor a alfa, se rechaza la H0, por lo tanto las correlaciones entre cada par de variables es nulo; es decir, sí es aplicable el AFE.  
+
+## Medida de adecuación muestral de Kaiser, Meyer y Oklin (KMO)  
+
+Se mantiene en el modelo, si el KMO es igual o mayor a 0,7.  
+Se elimina una variable del modelo si el KMO es menor a 0.7.  
+
+```{r}
+KMO(r)
+```
+
+
+KMO= 0.55, se recomienda conservar la variable edad, y en general no se recomienda aplicar el AFE a esta base de datos segun el KMO.  
+
+# Determinacion del número de factores a extraer  
+
+## Método de los componentes principales iterados  
+
+```{r}
+fa.parallel(r, fm="pa", n.obs = 30, ylabel = "Eigenvalues")
+```
+
+Según este método se puede extraer 1 factor que relacione a todas las variables.  
+
+## Método de los componentes principales.  
+
+```{r}
+fa.parallel(r, fm="pc", n.obs = 30, ylabel = "Eigenvalues")
+```
+
+Según este método se puede extraer 1 factor que relacione a todas las variables.  
+
+## Método de la maxima verosimilitud.  
+
+```{r}
+fa.parallel(r, fm="ml", n.obs = 30, ylabel = "Eigenvalues")
+```
+
+Según este método se puede extraer 1 factor que relacione a todas las variables.  
+
+## Metodo paralelo con iteraciones.  
+
+```{r}
+library(MASS)
+library(paran)
+paran(r, iterations = 1000, graph = T)
+```
+
+Según este método se puede extraer 1 factor que relacione a todas las variables.  
+
+# Métodos de extraccion de factores.  
+
+## Método de analisis de los componentes principales (ACP)  
+
+```{r}
+acp<- principal(r, nfactors = 1, rotate = "none")
+acp
+```
+
+Proportion Var 0.36 = 36%  
+RMSR = 0.12  
+
+Cuanto mayor sea el valor de P var, se dice que el factor extraido tiene mejor relacion con respecto a las variables; para el valor RMSR ocurre lo contrario, para un mejor resultado el valor de este item debe ser lo menor posible.  
+
+## Método de los ejes principales o componentes principales iterados (CPI)  
+
+```{r}
+cpi<- fa(r, nfactors = 1, fm = "pa", rotate = "none", n.obs = 30)
+cpi
+```
+
+Proportion Var 0.32 = 32%  
+RMSR = 0.08   
+
+## Método de la máxima verosimilitud  
+
+```{r}
+mve<- fa(r, nfactors = 1, fm = "ml", rotate = "none", n.obs = 30)
+mve
+```
+
+Proportion Var 0.33 = 33%  
+RMSR = 0.09  
+
+# Representación gráfica de los factores extraidos  
+
+## Método de análisis de los componentes principales (ACP)  
+
+```{r}
+#plot(acp, labels= row.names(r),cex =.7, ylim=c(-.8,.8))
+```
+
+## Método de los ejes principales o componentes principales iterados (CPI)  
+
+```{r}
+#plot(cpi, labels = row.names(r), cex =.7, ylim= c(-.8, .8))
+```
+
+## Método de la máxima verosimilitud (MVE)  
+
+```{r}
+#plot(mve, labels = row.names(r), cex =1, ylim= c(-.8, .8))
+```
+
+# Obtención de las puntuaciones factoriales  
+
+## Método de análisis de los componentes principales (ACP)  
+
+```{r}
+acp1<- principal(datost[,2:7], nfactors = 1, rotate = "none", scores= T)
+acp1$scores
+puntuacionesfactoriales_acp<- acp1$scores
+puntuacionesfactoriales_acp<- as.data.frame(puntuacionesfactoriales_acp)
+```
+
+## Método de los ejes principales o componentes principales iterados(CPI)  
+
+```{r}
+cpi1<- fa(datost[,2:7], nfactors = 1, fm = "pa", rotate = "none", n.obs = 30, scores= "regression")
+cpi1$scores
+puntfact_cpi<- cpi1$scores
+puntfact_cpi<- as.data.frame(puntfact_cpi)
+```
+
+## Método de la máxima verosimilitud (MVE)  
+
+```{r}
+mve1<- fa(datost[,2:7], nfactors = 1, fm = "ml", rotate = "none", n.obs = 30, scores= "regression")
+mve1$scores
+puntfact_mve<- mve1$scores
+puntfact_mve<- as.data.frame(puntfact_mve)
+```
+
+# Obtención de los factores extraidos
+
+### ACP  
+
+```{r}
+factor.scores(r, acp, method = "Thurstone")
+```
+
+Z1= 0.217Edad + 0.432Altura + 0.439Peso + 0.152Cantidad de veces que come -0.012Horas que duerme -0.120Horas que hace ejercicio.  
+
+### CPI  
+
+```{r}
+factor.scores(r, cpi, method = "Thurstone")
+```
+
+Z1= -0.020Edad + 0.215Altura + 0.816Peso -0.037Cantidad de veces que come -0.009Horas que duerme +0.042Horas que hace ejercicio.  
+
+### MVE  
+
+```{r}
+factor.scores(r, mve, method = "Thurstone")
+```
+
+Z1= 1.691357e-03Edad + 1.775402e-02Altura + 9.810134e-01Peso + 1.270987e-03Cantidad de veces que come + 1.157308e-05Horas que duerme -1.075054e-03Horas que hace ejercicio.  
+
+# Agregar el factor extraido al dataframe original  
+
+```{r}
+datos_puntuaciones<- c(Datos, puntuacionesfactoriales_acp)
+datos_puntuaciones<- as.data.frame(datos_puntuaciones)
+```
